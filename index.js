@@ -1,28 +1,64 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder
+} = require("discord.js");
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers
+  ]
 });
+
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID;
+
+if (!token || !clientId) {
+  console.error("DISCORD_TOKEN atau CLIENT_ID belum diatur.");
+  process.exit(1);
+}
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Tes apakah bot aktif')
+    .setName("ping")
+    .setDescription("Mengecek apakah bot aktif.")
 ].map(command => command.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: "10" }).setToken(token);
 
-(async () => {
-  await rest.put(
-    Routes.applicationCommands(process.env.CLIENT_ID),
-    { body: commands }
-  );
+async function registerCommands() {
+  try {
+    console.log("Mendaftarkan slash command...");
 
-  console.log('Slash command berhasil didaftarkan!');
-})();
+    await rest.put(
+      Routes.applicationCommands(clientId),
+      { body: commands }
+    );
 
-client.once('ready', () => {
+    console.log("Slash command berhasil didaftarkan.");
+  } catch (error) {
+    console.error("Gagal mendaftarkan command:", error);
+  }
+}
+
+client.once("ready", () => {
   console.log(`Bot aktif sebagai ${client.user.tag}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === "ping") {
+    await interaction.reply("Pong! AURI Website Bot aktif.");
+  }
+});
+
+async function start() {
+  await registerCommands();
+  await client.login(token);
+}
+
+start();
